@@ -4,17 +4,21 @@ module Language.Haskell.Holes.TH
 
 
 ------------------------------------------------------------------------------
-import Control.Monad               ( replicateM )
+import Control.Monad               ( replicateM, liftM2 )
 
 import Data.Char                   ( isDigit, ord )
 
 import Language.Haskell.Meta.Parse ( parseExp )
 
-import Language.Haskell.TH         ( Q, Exp, Pat, runIO )
+import Language.Haskell.TH         ( Q, Exp, Pat )
 import Language.Haskell.TH.Quote   ( QuasiQuoter ( QuasiQuoter,
                                                    quoteExp, quotePat ) )
 import Language.Haskell.TH.Syntax  ( Exp ( LamE ), Pat ( VarP ),
-                                     Name, showName, mkName, newName )
+                                     Name, showName, mkName, newName,
+                                     Loc ( Loc ), location )
+
+
+import Text.Parsec hiding ( parse )
 
 
 ------------------------------------------------------------------------------
@@ -30,6 +34,9 @@ type Hole = Int
 ------------------------------------------------------------------------------
 holesExp :: String -> Q Exp
 holesExp s = do
+  parsed <- parse pHoles s
+  let n = maximum [ h | Right h <- parsed ]
+
   vars <- replicateM n holeName
 
   -- no patterns quasiquotations in my ghc
@@ -39,12 +46,9 @@ holesExp s = do
 
   return $ LamE varsP bodyE
 
-  where parsed = parseHoles s
-        n      = maximum [ h | Right h <- parsed ] + 1
-
-        subst :: [Name] -> Either String Hole -> Either String String
-        subst vars (Left s)  = Left s
-        subst vars (Right n) = Right $ showName (vars !! n)
+  where subst vars (Left s)  = Left s
+        subst vars (Right n) = Right $ varName n
+          where varName n = ' ' : showName (vars !! (n - 1)) ++ " "
 
         uneither (Left x)  = x
         uneither (Right x) = x
@@ -52,27 +56,34 @@ holesExp s = do
         -- hacky since parseExpQ expects NameS
         holeName = fmap (mkName . showName) $ newName "hole"
 
+        parse p s = do
+          Loc file _ _ start end <- location
+          let fileInfo = (file ++ " (holes) " ++
+                          show start ++ " -- " ++ show end)
+          case runParser p () fileInfo s of
+            Left err -> fail (show err)
+            Right r  -> return r
+
+
 
 ------------------------------------------------------------------------------
-parseHole :: String -> Maybe (Hole, String)
-parseHole ('%' : c : cs)
-  | isDigit c && c /= '0' = Just (c2int c, cs)
-  | otherwise             = Nothing
-  where c2int c = ord c - ord '1'
-parseHole _               = Nothing
+pHoles :: Parsec String () [Either String Hole]
+pHoles = many $
+  fmap Right (try hole) <|> fmap Left quoted <|> fmap Left rest
+  where hole = do
+          char '%'
+          d <- oneOf ['1' .. '9']
+          return $ ord d - ord '0'
+        quoted =
+          liftM2 (:) (char '"') (manyTillIncluding anyChar (try end))
+          where end = liftM2 (:) (noneOf ['\\']) (string "\"")
+        rest =
+          liftM2 (:) (char '%') (many $ noneOf ['%', '"'])
+          <|>
+          (many1 $ noneOf ['%', '"'])
 
-
-------------------------------------------------------------------------------
-parseHoles :: String -> [Either String Hole]
-parseHoles s = go s "" []
-  where go "" pre r = reverse (maybePre pre r)
-        go s@(c : cs) pre r =
-          case parseHole s of
-            Nothing      -> go cs (c : pre) r
-            Just (h, rs) -> go rs "" (Right h : (maybePre pre r))
-
-        maybePre ""  r = r
-        maybePre pre r = Left (reverse pre) : r
+        manyTillIncluding p end = scan
+          where scan = end <|> liftM2 (:) p scan
 
 
 ------------------------------------------------------------------------------
