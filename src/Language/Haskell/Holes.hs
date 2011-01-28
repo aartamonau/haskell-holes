@@ -6,22 +6,25 @@ module Language.Haskell.Holes.TH
 ------------------------------------------------------------------------------
 import Control.Monad               ( replicateM, liftM2 )
 
-import Data.Char                   ( isDigit, ord )
+import Data.Char                   ( ord )
 
 import Language.Haskell.Meta.Parse ( parseExp )
 
-import Language.Haskell.TH         ( Q, Exp, Pat )
+import Language.Haskell.TH         ( Q, Exp )
 import Language.Haskell.TH.Quote   ( QuasiQuoter ( QuasiQuoter,
                                                    quoteExp, quotePat ) )
 import Language.Haskell.TH.Syntax  ( Exp ( LamE ), Pat ( VarP ),
-                                     Name, showName, mkName, newName,
+                                     showName, mkName, newName,
                                      Loc ( Loc ), location )
 
 
-import Text.Parsec hiding ( parse )
+import Text.Parsec                 ( Parsec, (<|>), runParser,
+                                     many, many1, try, string,
+                                     char, anyChar, oneOf, noneOf )
 
 
 ------------------------------------------------------------------------------
+holes :: QuasiQuoter
 holes = QuasiQuoter { quoteExp = holesExp,
                       quotePat = fail "Quoting patterns is unsupported"
                     }
@@ -46,7 +49,7 @@ holesExp s = do
 
   return $ LamE varsP bodyE
 
-  where subst vars (Left s)  = Left s
+  where subst _    (Left s)  = Left s
         subst vars (Right n) = Right $ varName n
           where varName n = ' ' : showName (vars !! (n - 1)) ++ " "
 
