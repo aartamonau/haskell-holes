@@ -79,11 +79,11 @@ pHoles = many $
           return $ ord d - ord '0'
         quoted =
           liftM2 (:) (char '"') (manyTillIncluding anyChar (try end))
-          where end = liftM2 (:) (noneOf ['\\']) (string "\"")
+          where end = liftM2 (:) (noneOf "\\") (string "\"")
         rest =
-          liftM2 (:) (char '%') (many $ noneOf ['%', '"'])
+          liftM2 (:) (char '%') (many $ noneOf "%\"")
           <|>
-          (many1 $ noneOf ['%', '"'])
+          many1 (noneOf "%\"")
 
         manyTillIncluding p end = scan
           where scan = end <|> liftM2 (:) p scan
