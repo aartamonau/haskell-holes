@@ -1,4 +1,7 @@
-module Language.Haskell.Holes.TH
+{-# LANGUAGE CPP #-}
+
+------------------------------------------------------------------------------
+module Language.Haskell.Holes
        ( holes )
        where
 
@@ -12,7 +15,11 @@ import Language.Haskell.Meta.Parse ( parseExp )
 
 import Language.Haskell.TH         ( Q, Exp )
 import Language.Haskell.TH.Quote   ( QuasiQuoter ( QuasiQuoter,
-                                                   quoteExp, quotePat ) )
+                                                   quoteExp, quotePat
+#ifdef GHC7
+                                                   , quoteType, quoteDec
+#endif
+                                                 ) )
 import Language.Haskell.TH.Syntax  ( Exp ( LamE ), Pat ( VarP ),
                                      showName, mkName, newName,
                                      Loc ( Loc ), location )
@@ -42,8 +49,12 @@ import Text.Parsec                 ( Parsec, (<|>), runParser,
 -- * If '%' is used insided function body it should be surrounded by spaces to
 --   avoid substitution (in case it's followed by some number).
 holes :: QuasiQuoter
-holes = QuasiQuoter { quoteExp = holesExp,
-                      quotePat = fail "Quoting patterns is unsupported"
+holes = QuasiQuoter { quoteExp  = holesExp
+                    , quotePat  = fail "Patterns quotations are unsupported"
+#ifdef GHC7
+                    , quoteType = fail "Type quotations are unsupported"
+                    , quoteDec  = fail "Declaration quotations are unsupported"
+#endif
                     }
 
 

@@ -1,0 +1,43 @@
+name:     holes
+version:  0.0.1
+synopsis: Quasiquoter to define anonymous functions that can reference its
+          parameters by a number.
+
+description:
+  Quasiquoter to define anonymous functions that can reference its parameters
+  by a number.
+
+license:       LGPL
+license-file:  LICENSE
+author:        Aliaksiej Artamonaŭ
+maintainer:    Aliaksiej Artamonaŭ <aliaksiej.artamonau@gmail.com>
+build-type:    Simple
+cabal-version: >= 1.6
+homepage:      http://github.com/shaleny/haskell-holes
+category:      Language
+
+extra-source-files:
+  LICENSE
+
+
+------------------------------------------------------------------------------
+library
+  hs-source-dirs: src
+
+  exposed-modules:
+    Language.Haskell.Holes
+
+  build-depends:
+    base >= 4,
+    template-haskell >= 2.4.0,
+    haskell-src-meta,
+    parsec >= 3.0
+
+  ghc-options: -Wall -fwarn-tabs -O2
+               -fno-warn-unused-do-bind -fno-warn-name-shadowing
+
+  if impl(ghc >= 7.0)
+    cpp-options: -DGHC7
+
+
+------------------------------------------------------------------------------
