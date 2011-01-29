@@ -24,6 +24,23 @@ import Text.Parsec                 ( Parsec, (<|>), runParser,
 
 
 ------------------------------------------------------------------------------
+-- | Quasiquoter to define anonymous functions that can reference function
+-- parameters by their number.
+--
+-- Example:
+--
+-- @
+-- :t [$holes| %1 + %2 |]
+-- [$holes| %1 + %2 |] :: (Num a) => a -> a -> a
+-- @
+--
+-- * Only numbers 1 through 9 can be used to reference function parameters.
+--
+-- * Number of parameters that generated function takes is determined by the
+--   maximum parameter number that is referenced in the function body.
+--
+-- * If '%' is used insided function body it should be surrounded by spaces to
+--   avoid substitution (in case it's followed by some number).
 holes :: QuasiQuoter
 holes = QuasiQuoter { quoteExp = holesExp,
                       quotePat = fail "Quoting patterns is unsupported"
