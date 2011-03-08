@@ -17,6 +17,7 @@ main = hakyll $ do
     forM_ pages $ \p -> do
         route   p $ setExtension "html"
         compile p $ readPageCompiler
+            >>> arr (setField "projectUrl" projectUrl)
             >>> pageRenderPandoc
             >>> applyTemplateCompiler "templates/default.html"
             >>> relativizeUrlsCompiler
@@ -26,3 +27,5 @@ main = hakyll $ do
   where
     pages = [ "index.markdown"
             ]
+
+    projectUrl = "http://github.com/shaleny/haskell-holes"
