@@ -4,6 +4,10 @@ ROOT := $(abspath ../)
 generate:
 	@runhaskell hakyll.hs build
 
+.PHONY: server
+server: generate
+	@runhaskell hakyll.hs server
+
 .PHONY: clean
 clean:
 	@runhaskell hakyll.hs clean
